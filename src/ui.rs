@@ -1,41 +1,53 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use crate::updater::{
-    Data,
-    update as update_data,
-    call as call_volume_edit,
-    // mute as call_muting
+    SinkInputData, PulseHandler,
+    update_sink_inputs,
+    update_sink_input_volume_by_id,
+    update_sink_input_mute_by_id,
 };
+
+use crate::button::WgpuButton as Button;
+use crate::button;
 
 use iced::{
-    slider, scrollable, // button,
-    Slider, Scrollable, // Button,
-    Sandbox, Element, Container, Column, Length, Text, Row, Align,
+    slider, scrollable,
+    Slider, Scrollable,
+    Sandbox, Element, Container, Column, Length, Text, Row,
+    Align, HorizontalAlignment, VerticalAlignment
 };
 
-#[derive(Default)]
+const MUTE_BUTTON_SIZE: u16 = 200;
+const APPLICAATION_NAME_SIZE: u16 = 200;
+
 pub struct UserInterface {
-    sliders: Vec<(Data, slider::State)>,
-    // sliders: Vec<(Data, slider::State, button::State)>,
-    // text:    String,
+    pulse_handler: PulseHandler,
+    sink_input_uis: Vec<(slider::State, button::State)>,
+    sink_input_data: Rc<RefCell<Vec<SinkInputData>>>,
+    // sliders: Rc<RefCell<Vec<(Data, slider::State, button::State)>>>,
     scroll:  scrollable::State,
+    mute_button_texts: (Text, Text),
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SliderChanged(usize, usize, usize),
-    // MuteButtonPress(usize, bool),
+    SliderChanged(usize, u32, u32),
+    MuteButtonPressed(u32, bool),
 }
 
-impl UserInterface {    
-    fn init_data() -> Vec<(
-	Data,
-	slider::State,
-	// button::State,
-    )> {
-	update_data()
-	    .into_iter()
-	    .map(|v| { (v, slider::State::new()) })
-	    // .map(|v| { (v, slider::State::new(), button::State::new()) })
-	    .collect()
+impl UserInterface {
+    fn update_data(&mut self) {
+	println!("Log: Updating!");
+	
+	self.sink_input_data = Rc::new(RefCell::new(Vec::new()));
+	update_sink_inputs(&mut self.pulse_handler, self.sink_input_data.clone());
+	
+	self.sink_input_uis = Vec::new();
+	for _ in 0..self.sink_input_data.borrow().len() {
+	    self.sink_input_uis.push((slider::State::new(),
+				      button::State::new()));
+	}
     }
 }
 
@@ -44,9 +56,18 @@ impl Sandbox for UserInterface {
 
     fn new() -> Self {
 	Self {
-	    sliders: Self::init_data(),
-	    // text:    String::from("Debug"),
-	    scroll:  scrollable::State::new(),
+	    pulse_handler:     PulseHandler::new().unwrap(),
+	    sink_input_uis:    Vec::new(),
+	    sink_input_data:   Rc::new(RefCell::new(Vec::new())),
+	    scroll: scrollable::State::new(),
+	    mute_button_texts: (Text::new("Mute")
+				.width(Length::Fill)
+				.vertical_alignment(VerticalAlignment::Center)
+				.horizontal_alignment(HorizontalAlignment::Center),
+				Text::new("Unmute")
+				.width(Length::Fill)
+				.vertical_alignment(VerticalAlignment::Center)
+				.horizontal_alignment(HorizontalAlignment::Center),),
 	}
     }
 
@@ -56,45 +77,82 @@ impl Sandbox for UserInterface {
 
     fn update(&mut self, message: Message) {
 	match message {
-	    Message::SliderChanged(_index, id, value) => {
-		call_volume_edit(id, value);
-	    },
-	    // Message::MuteButtonPress(id, status) => {
-	    // 	call_muting(id, status);
-	    // }
+	    Message::SliderChanged(index, id, volume) => {
+		println!("Log: slider moved with index: {}, id: {}, value: {}!", index, id, volume);
+		
+		self.sink_input_data.borrow_mut().get_mut(index).unwrap().volume = volume;
+		
+		update_sink_input_volume_by_id(&mut self.pulse_handler, id, volume)
+	    }
+	    Message::MuteButtonPressed(id, status) => {
+		update_sink_input_mute_by_id(&mut self.pulse_handler, id, status)
+	    }
 	}
     }
 
     fn view(&mut self) -> Element<Message> {
+	self.update_data();
 
 	let mut scrollable = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
-            .height(Length::Units(100));
+            .height(Length::Fill);
 
-	self.sliders = Self::init_data();
-
-	for (i, data) in self.sliders.iter_mut().enumerate() {
-	    let (id, _is_muted, name) = (data.0.id, data.0.mute, data.0.name.to_owned());
-	    let slider = Slider::new(&mut data.1,
-				     0.0..=65536.0,
-				     data.0.volume as f32,
-				     move |v| Message::SliderChanged(i, id, v as usize));
-
-	    // let mute_button = Button::new(&mut data.2,
-	    // 				  Text::new(String::from(
-	    // 				      if is_muted { "Unmute" } else { "Mute" })))
-    	    // 	.padding(10)
-    	    // 	.on_press(move || Message::MuteButtonPress(id, is_muted));
+	let sink_input_data_ref = self.sink_input_data.clone();
+	
+	for (index, sink_input_uis) in self.sink_input_uis.iter_mut().enumerate() {
 	    
-	    let row = Row::new()
-    	    	.spacing(10)
-                .align_items(Align::Center)
-    	    	.push(Text::new(name).width(Length::from(100)))
-    	    	// .push(mute_button);
-    	    	.push(slider);
+	    let id      = sink_input_data_ref.borrow().get(index).unwrap().id;
+	    let is_mute = sink_input_data_ref.borrow().get(index).unwrap().mute;
+
+	    let text   = Text  ::new(sink_input_data_ref.borrow().get(index).unwrap().name.clone())
+		.width(Length::from(APPLICAATION_NAME_SIZE))
+		.vertical_alignment(VerticalAlignment::Center)
+		.horizontal_alignment(HorizontalAlignment::Right);
+	    
+	    let slider = Slider::new(&mut sink_input_uis.0,
+				     0.0..=65536.0,
+				     sink_input_data_ref.borrow().get(index).unwrap().volume as f32,
+				     move |v| Message::SliderChanged(index, id, v as u32));
+
+	    let m_bttn = Button::new(&mut sink_input_uis.1,
+				     if is_mute { self.mute_button_texts.0.clone() }
+				     else       { self.mute_button_texts.1.clone() },
+				     move || Message::MuteButtonPressed(id, !is_mute))
+    		.width(Length::from(MUTE_BUTTON_SIZE))
+    		.padding(10);
+
+	    let row    = Row::new()
+    		.spacing(10)
+    		.align_items(Align::Center)
+    		.push(text)
+    		.push(slider)
+    		.push(m_bttn);
+
 	    scrollable = scrollable.push(row);
-	    // scrollable = scrollable.push(slider);
 	}
+	
+	// for (i, data) in self.sliders.iter_mut().enumerate() {
+	//     let (id, is_muted, name) = (data.0.id, data.0.mute, data.0.name.to_owned());
+	//     let slider = Slider::new(&mut data.1,
+	// 			     0.0..=65536.0,
+	// 			     data.0.volume as f32,
+	// 			     move |v| Message::SliderChanged(i, id, v as usize));
+
+	//     let mute_button = Button::new(&mut data.2,
+	//     				  Text::new(if is_muted { "Unmute" } else { "Mute" }),
+	// 				  move || Message::MuteButtonPressed(id, is_muted))
+	//     	.width(Length::from(100))
+    	//     	.padding(10);
+
+	//     let row = Row::new()
+    	//     	.spacing(10)
+        //         .align_items(Align::Center)
+    	//     	.push(Text::new(name).width(Length::from(200)))
+    	//     	.push(slider)
+    	//     	.push(mute_button);
+	    
+	//     scrollable = scrollable.push(row);
+	// }
 	
 	let content = Column::new()
 	    .spacing(20)
