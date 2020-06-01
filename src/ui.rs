@@ -18,7 +18,9 @@ use iced::{
     Align, HorizontalAlignment, VerticalAlignment
 };
 
-const MUTE_BUTTON_SIZE: u16 = 200;
+const MAX_VOLUME: u32 = 65536;
+const MUTE_BUTTON_SIZE: u16 = 100;
+const PROCENT_STATUS_SIZE: u16 = 100;
 const APPLICATION_NAME_SIZE: u16 = 200;
 const APPLICATION_NAME: &'static str = "Volume Controller";
 
@@ -126,6 +128,12 @@ impl Sandbox for UserInterface {
     		.align_items(Align::Center)
     		.push(text)
     		.push(slider)
+    		.push(Text::new(&format!("{}%",
+					 sink_input_datas.borrow().get(index).unwrap().volume
+					 * 100 / MAX_VOLUME))
+        	      .horizontal_alignment(HorizontalAlignment::Center)
+        	      .vertical_alignment(VerticalAlignment::Center)
+        	      .width(Length::from(PROCENT_STATUS_SIZE)))
     		.push(m_bttn);
 
 	    scrollable = scrollable.push(row);
