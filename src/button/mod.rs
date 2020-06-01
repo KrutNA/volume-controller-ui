@@ -192,7 +192,7 @@ where
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 let bounds = layout.bounds();
 		
-                let is_clicked = !self.state.is_pressed
+                let is_clicked = self.state.is_pressed
                     && bounds.contains(cursor_position);
 		
                 self.state.is_pressed = false;

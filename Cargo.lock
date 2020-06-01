@@ -1968,8 +1968,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
-name = "volume-level-ui"
-version = "0.1.0"
+name = "volume-controller-ui"
+version = "0.2.0"
 dependencies = [
  "iced",
  "iced_graphics",
