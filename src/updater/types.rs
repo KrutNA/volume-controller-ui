@@ -24,24 +24,32 @@ pub struct SinkInputData {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SinkData {
+pub struct MainData {
     pub volume: u32,
     pub mute:   bool,
 }
 
 impl<'a> From<&'a introspect::SinkInputInfo<'a>> for SinkInputData {
     fn from(item: &'a introspect::SinkInputInfo<'a>) -> Self {
-	SinkInputData { id:     item.index.clone(),
-			name:   item.proplist.get_str(APPLICATION_NAME).unwrap(),
-			volume: item.volume.get()[0].0.clone(),
-			mute:   item.mute.clone() }
+	Self { id:     item.index.clone(),
+	       name:   item.proplist.get_str(APPLICATION_NAME).unwrap(),
+	       volume: item.volume.get()[0].0.clone(),
+	       mute:   item.mute.clone() }
     }
 }
 
 #[allow(dead_code)]
-impl<'a> From<&'a introspect::SinkInfo<'a>> for SinkData {
+impl<'a> From<&'a introspect::SinkInfo<'a>> for MainData {
     fn from(item: &'a introspect::SinkInfo<'a>) -> Self {
-	SinkData { volume: item.volume.get()[0].0.clone(),
-		   mute:   item.mute.clone() }
+	Self { volume: item.volume.get()[0].0.clone(),
+	       mute:   item.mute.clone() }
+    }
+}
+
+#[allow(dead_code)]
+impl<'a> From<&'a introspect::SourceInfo<'a>> for MainData {
+    fn from(item: &'a introspect::SourceInfo<'a>) -> Self {
+	Self { volume: item.volume.get()[0].0.clone(),
+	       mute:   item.mute.clone() }
     }
 }

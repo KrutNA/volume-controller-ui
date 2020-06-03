@@ -3,7 +3,7 @@ mod types;
 pub use handler::PulseHandler;
 pub use types::{
     SinkInputData,
-    SinkData,
+    MainData,
 };
 
 #[cfg(feature = "another_updater")]
@@ -161,7 +161,7 @@ pub fn update_sink_input_mute_by_id(
 
 pub fn update_fetch_sink(
     handler: &mut PulseHandler,
-    sink: Rc<RefCell<SinkData>>,
+    sink: Rc<RefCell<MainData>>,
 ) {
     #[cfg(feature = "time")]
     let start = SystemTime::now();    
@@ -209,6 +209,60 @@ pub fn update_sink_mute(
 
     #[cfg(feature = "time")]
     println!("Change sink mute for {} s.",
+	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+
+}
+
+pub fn update_fetch_source(
+    handler: &mut PulseHandler,
+    source: Rc<RefCell<MainData>>,
+) {
+    #[cfg(feature = "time")]
+    let start = SystemTime::now();    
+
+    let op = handler.introspect.get_source_info_by_index(
+	1, move |x| match x { 
+	    ListResult::Item(x) => {
+		let mut source = source.borrow_mut();
+		source.volume  = x.volume.get()[0].0.clone();
+		source.mute    = x.mute.clone();
+	    }
+	    _ => ()
+	});
+    handler.wait_for_operation(op);
+    
+    #[cfg(feature = "time")]
+    println!("Change source input volume for {} s.",
+	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+}
+
+pub fn update_source_volume(
+    handler: &mut PulseHandler,
+    volume:  u32,
+) {
+    #[cfg(feature = "time")]
+    let start = SystemTime::now();  
+    
+    let op = handler.introspect.set_source_volume_by_index(1, &convert_volume(volume), None);
+    handler.wait_for_operation(op);
+    
+    #[cfg(feature = "time")]
+    println!("Change source volume for {} s.",
+	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+}
+
+pub fn update_source_mute(
+    handler: &mut PulseHandler,
+    status:  bool,
+) {
+    #[cfg(feature = "time")]
+    let start = SystemTime::now();
+
+    let op = handler.introspect.set_source_mute_by_index(1, status, None);
+    handler.wait_for_operation(op);
+
+    #[cfg(feature = "time")]
+    println!("Change source mute for {} s.",
 	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
 
 }
