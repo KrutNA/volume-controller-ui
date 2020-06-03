@@ -15,10 +15,16 @@ impl Counter {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SinkInputData {
     pub id:     u32,
     pub name:   String,
+    pub volume: u32,
+    pub mute:   bool,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct SinkData {
     pub volume: u32,
     pub mute:   bool,
 }
@@ -27,8 +33,15 @@ impl<'a> From<&'a introspect::SinkInputInfo<'a>> for SinkInputData {
     fn from(item: &'a introspect::SinkInputInfo<'a>) -> Self {
 	SinkInputData { id:     item.index.clone(),
 			name:   item.proplist.get_str(APPLICATION_NAME).unwrap(),
-			volume: item.volume.get().get(0).unwrap().0.clone(),
+			volume: item.volume.get()[0].0.clone(),
 			mute:   item.mute.clone() }
     }
 }
 
+#[allow(dead_code)]
+impl<'a> From<&'a introspect::SinkInfo<'a>> for SinkData {
+    fn from(item: &'a introspect::SinkInfo<'a>) -> Self {
+	SinkData { volume: item.volume.get()[0].0.clone(),
+		   mute:   item.mute.clone() }
+    }
+}

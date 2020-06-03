@@ -1,7 +1,10 @@
 mod handler;
 mod types;
 pub use handler::PulseHandler;
-pub use types::SinkInputData;
+pub use types::{
+    SinkInputData,
+    SinkData,
+};
 
 #[cfg(feature = "another_updater")]
 use types::Counter;
@@ -118,7 +121,7 @@ pub fn update_sink_inputs(
     }
 
     #[cfg(feature = "time")]
-    println!("Info update for {} s.",
+    println!("Data update for {} s.",
 	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
 
 }
@@ -131,11 +134,7 @@ pub fn update_sink_input_volume_by_id(
     #[cfg(feature = "time")]
     let start = SystemTime::now();
     
-    let mut channel_volumes = ChannelVolumes::default();
-    channel_volumes.set(2, Volume(volume));
-    
-    let op = handler.introspect.set_sink_input_volume(id, &channel_volumes, None);
-
+    let op = handler.introspect.set_sink_input_volume(id, &convert_volume(volume), None);
     handler.wait_for_operation(op);
 
     #[cfg(feature = "time")]
@@ -150,13 +149,72 @@ pub fn update_sink_input_mute_by_id(
     status: bool,
 ) {
     #[cfg(feature = "time")]
-    let start = SystemTime::now();    
+    let start = SystemTime::now();  
     
     let op = handler.introspect.set_sink_input_mute(id, status, None);
-    
     handler.wait_for_operation(op);
     
     #[cfg(feature = "time")]
-    println!("Change sink input volume for- {} s.",
+    println!("Change sink input volume for {} s.",
 	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+}
+
+pub fn update_fetch_sink(
+    handler: &mut PulseHandler,
+    sink: Rc<RefCell<SinkData>>,
+) {
+    #[cfg(feature = "time")]
+    let start = SystemTime::now();    
+
+    let op = handler.introspect.get_sink_info_by_index(
+	0, move |x| match x { 
+	    ListResult::Item(x) => {
+		let mut sink = sink.borrow_mut();
+		sink.volume = x.volume.get()[0].0.clone();
+		sink.mute   = x.mute.clone();
+	    }
+	    _ => ()
+	});
+    handler.wait_for_operation(op);
+    
+    #[cfg(feature = "time")]
+    println!("Change sink input volume for {} s.",
+	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+}
+
+pub fn update_sink_volume(
+    handler: &mut PulseHandler,
+    volume:  u32,
+) {
+    #[cfg(feature = "time")]
+    let start = SystemTime::now();  
+    
+    let op = handler.introspect.set_sink_volume_by_index(0, &convert_volume(volume), None);
+    handler.wait_for_operation(op);
+    
+    #[cfg(feature = "time")]
+    println!("Change sink volume for {} s.",
+	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+}
+
+pub fn update_sink_mute(
+    handler: &mut PulseHandler,
+    status:  bool,
+) {
+    #[cfg(feature = "time")]
+    let start = SystemTime::now();
+
+    let op = handler.introspect.set_sink_mute_by_index(0, status, None);
+    handler.wait_for_operation(op);
+
+    #[cfg(feature = "time")]
+    println!("Change sink mute for {} s.",
+	     SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+
+}
+
+fn convert_volume(volume: u32) -> ChannelVolumes {
+    let mut channel_volumes = ChannelVolumes::default();
+    channel_volumes.set(2, Volume(volume));
+    channel_volumes
 }

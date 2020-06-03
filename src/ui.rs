@@ -5,10 +5,9 @@ use std::cell::RefCell;
 use std::time::SystemTime;
 
 use crate::updater::{
-    SinkInputData, PulseHandler,
-    update_sink_inputs,
-    update_sink_input_volume_by_id,
-    update_sink_input_mute_by_id,
+    SinkInputData, SinkData, PulseHandler,
+    update_sink_inputs, update_sink_input_volume_by_id, update_sink_input_mute_by_id,
+    update_fetch_sink, update_sink_volume, update_sink_mute,
 };
 
 use crate::button::WgpuButton as Button;
@@ -27,19 +26,26 @@ const MUTE_BUTTON_SIZE: u16 = 100;
 const PROCENT_STATUS_SIZE: u16 = 100;
 const APPLICATION_NAME_SIZE: u16 = 200;
 const APPLICATION_NAME: &'static str = "Volume Controller";
+const SINK_NAME: &'static str = "VOLUME";
 
 pub struct UserInterface {
-    pulse_handler: PulseHandler,
-    sink_input_uis: Vec<(slider::State, button::State)>,
-    sink_input_datas: Rc<RefCell<Vec<SinkInputData>>>,
-    scroll:  scrollable::State,
+    pulse_handler:     PulseHandler,
+    scroll:            scrollable::State,
     mute_button_texts: (Text, Text),
+    
+    sink_input_uis:    Vec<(slider::State, button::State)>,
+    sink_input_datas:  Rc<RefCell<Vec<SinkInputData>>>,
+
+    sink_ui:           (slider::State, button::State),
+    sink_data:         Rc<RefCell<SinkData>>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     SliderChanged(usize, u32, u32),
     MuteButtonPressed(u32, bool),
+    SinkSliderChanged(u32),
+    SinkMuteButtonPressed(bool),
 }
 
 impl UserInterface {
@@ -50,6 +56,9 @@ impl UserInterface {
 	update_sink_inputs(&mut self.pulse_handler,
 			   self.sink_input_datas.clone(),
 			   &mut self.sink_input_uis);
+
+	update_fetch_sink (&mut self.pulse_handler,
+			   self.sink_data.clone());
     }
 }
 
@@ -59,8 +68,6 @@ impl Sandbox for UserInterface {
     fn new() -> Self {
 	Self {
 	    pulse_handler:     PulseHandler::new().unwrap(),
-	    sink_input_uis:    Vec::new(),
-	    sink_input_datas:  Rc::new(RefCell::new(Vec::new())),
 	    scroll:            scrollable::State::new(),
 	    mute_button_texts: (Text::new("Mute")
 				.width(Length::Fill)
@@ -70,6 +77,13 @@ impl Sandbox for UserInterface {
 				.width(Length::Fill)
 				.vertical_alignment(VerticalAlignment::Center)
 				.horizontal_alignment(HorizontalAlignment::Center),),
+
+	    sink_input_uis:    Vec::new(),
+	    sink_input_datas:  Rc::new(RefCell::new(Vec::new())),
+
+	    sink_ui: (slider::State::new(),
+		      button::State::new()),
+	    sink_data: Rc::new(RefCell::new(SinkData::default())),
 	}
     }
 
@@ -80,19 +94,30 @@ impl Sandbox for UserInterface {
     fn update(&mut self, message: Message) {
 	match message {
 	    Message::SliderChanged(index, id, volume) => {
-		
 		#[cfg(debug_assertions)]
-		println!("Log: slider with index {} of {} changed to {}!", index, id, volume);
+		println!("Log: slider with index {} of {} changed to {}.", index, id, volume);
 		
-		self.sink_input_datas.borrow_mut().get_mut(index).unwrap().volume = volume;
+		self.sink_input_datas.borrow_mut()[index].volume = volume;
 		update_sink_input_volume_by_id(&mut self.pulse_handler, id, volume);
-
 	    }
 	    Message::MuteButtonPressed(id, status) => {
 		#[cfg(debug_assertions)]
-		println!("Log: button of {} pressed with status to {}", id, status);
+		println!("Log: button of {} pressed with status to {}.", id, status);
 		
 		update_sink_input_mute_by_id(&mut self.pulse_handler, id, status);
+	    }
+	    Message::SinkSliderChanged(volume) => {
+		#[cfg(debug_assertions)]
+		println!("Log: volume slider changed to {}.", volume);
+
+		update_sink_volume(&mut self.pulse_handler, volume);
+	    }
+
+	    Message::SinkMuteButtonPressed(status) => {
+		#[cfg(debug_assertions)]
+		println!("Log: volumebutton pressed with status to {}.", status);
+
+		update_sink_mute(&mut self.pulse_handler, status);
 	    }
 	}
     }
@@ -107,8 +132,43 @@ impl Sandbox for UserInterface {
             .width(Length::Fill)
             .height(Length::Fill);
 
+	let sink_row = {
+	    let sink_data = self.sink_data.borrow();
+	    let is_mute = sink_data.mute;
+
+	    let text   = Text::new(SINK_NAME)
+		.width(Length::from(APPLICATION_NAME_SIZE))
+		.vertical_alignment(VerticalAlignment::Center)
+		.horizontal_alignment(HorizontalAlignment::Right);
+
+	    let slider = Slider::new(&mut self.sink_ui.0,
+				     0.0..=MAX_VOLUME_FLOAT,
+				     sink_data.volume as f32,
+				     move |v| Message::SinkSliderChanged(v as u32));
+	    let button = Button::new(&mut self.sink_ui.1,
+				     if is_mute { self.mute_button_texts.0.clone() }
+				     else       { self.mute_button_texts.1.clone() },
+				     move || Message::SinkMuteButtonPressed(
+					 !is_mute))
+    		.width(Length::from(MUTE_BUTTON_SIZE))
+    		.padding(10);
+
+	    let status = Text::new(&format!("{}%", sink_data.volume * 100 / MAX_VOLUME))
+        	.horizontal_alignment(HorizontalAlignment::Center)
+        	.vertical_alignment(VerticalAlignment::Center)
+        	.width(Length::from(PROCENT_STATUS_SIZE));
+	    
+	    Row::new()
+    		.align_items(Align::Center)
+		.spacing(10)
+		.push(text)
+		.push(slider)
+    		.push(status)
+    		.push(button)
+	};
+	scrollable = scrollable.push(sink_row);
+
 	let sink_input_datas = self.sink_input_datas.borrow();
-	
 	for (index, sink_input_ui) in self.sink_input_uis.iter_mut().enumerate() {
 	    
 	    let id      = sink_input_datas[index].id;
@@ -124,7 +184,7 @@ impl Sandbox for UserInterface {
 				     sink_input_datas[index].volume as f32,
 				     move |v| Message::SliderChanged(index, id, v as u32));
 
-	    let m_bttn = Button::new(&mut sink_input_ui.1,
+	    let button = Button::new(&mut sink_input_ui.1,
 				     if is_mute { self.mute_button_texts.0.clone() }
 				     else       { self.mute_button_texts.1.clone() },
 				     move || Message::MuteButtonPressed(id, !is_mute))
@@ -142,7 +202,7 @@ impl Sandbox for UserInterface {
         	      .horizontal_alignment(HorizontalAlignment::Center)
         	      .vertical_alignment(VerticalAlignment::Center)
         	      .width(Length::from(PROCENT_STATUS_SIZE)))
-    		.push(m_bttn);
+    		.push(button);
 
 	    scrollable = scrollable.push(row);
 	}
