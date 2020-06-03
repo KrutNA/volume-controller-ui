@@ -2,7 +2,6 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::ops::Deref;
 
-use libpulse_binding as pulse;
 use pulse::mainloop::standard::{Mainloop, IterateResult};
 use pulse::proplist::{Proplist, properties};
 use pulse::operation::{Operation, State as OpState};

@@ -1,6 +1,9 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
+#[cfg(feature = "time")]
+use std::time::SystemTime;
+
 use crate::updater::{
     SinkInputData, PulseHandler,
     update_sink_inputs,
@@ -19,6 +22,7 @@ use iced::{
 };
 
 const MAX_VOLUME: u32 = 65536;
+const MAX_VOLUME_FLOAT: f32 = 65536.0;
 const MUTE_BUTTON_SIZE: u16 = 100;
 const PROCENT_STATUS_SIZE: u16 = 100;
 const APPLICATION_NAME_SIZE: u16 = 200;
@@ -76,18 +80,19 @@ impl Sandbox for UserInterface {
     fn update(&mut self, message: Message) {
 	match message {
 	    Message::SliderChanged(index, id, volume) => {
+		
 		#[cfg(debug_assertions)]
-		println!("Log: slider moved with index: {}, id: {}, value: {}!", index, id, volume);
+		println!("Log: slider with index {} of {} changed to {}!", index, id, volume);
 		
 		self.sink_input_datas.borrow_mut().get_mut(index).unwrap().volume = volume;
-		
-		update_sink_input_volume_by_id(&mut self.pulse_handler, id, volume)
+		update_sink_input_volume_by_id(&mut self.pulse_handler, id, volume);
+
 	    }
 	    Message::MuteButtonPressed(id, status) => {
 		#[cfg(debug_assertions)]
-		println!("Log: button pressed with status to {}", status);
+		println!("Log: button of {} pressed with status to {}", id, status);
 		
-		update_sink_input_mute_by_id(&mut self.pulse_handler, id, status)
+		update_sink_input_mute_by_id(&mut self.pulse_handler, id, status);
 	    }
 	}
     }
@@ -95,25 +100,28 @@ impl Sandbox for UserInterface {
     fn view(&mut self) -> Element<Message> {
 	self.update_data();
 
+	#[cfg(feature = "time")]
+	let start = SystemTime::now();
+	
 	let mut scrollable = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
             .height(Length::Fill);
 
-	let sink_input_datas = self.sink_input_datas.clone();
+	let sink_input_datas = self.sink_input_datas.borrow();
 	
 	for (index, sink_input_ui) in self.sink_input_uis.iter_mut().enumerate() {
 	    
-	    let id      = sink_input_datas.borrow().get(index).unwrap().id;
-	    let is_mute = sink_input_datas.borrow().get(index).unwrap().mute;
+	    let id      = sink_input_datas[index].id;
+	    let is_mute = sink_input_datas[index].mute;
 
-	    let text   = Text  ::new(sink_input_datas.borrow().get(index).unwrap().name.clone())
+	    let text   = Text  ::new(sink_input_datas[index].name.clone())
 		.width(Length::from(APPLICATION_NAME_SIZE))
 		.vertical_alignment(VerticalAlignment::Center)
 		.horizontal_alignment(HorizontalAlignment::Right);
 
 	    let slider = Slider::new(&mut sink_input_ui.0,
-				     0.0..=65536.0,
-				     sink_input_datas.borrow().get(index).unwrap().volume as f32,
+				     0.0..=MAX_VOLUME_FLOAT,
+				     sink_input_datas[index].volume as f32,
 				     move |v| Message::SliderChanged(index, id, v as u32));
 
 	    let m_bttn = Button::new(&mut sink_input_ui.1,
@@ -129,7 +137,7 @@ impl Sandbox for UserInterface {
     		.push(text)
     		.push(slider)
     		.push(Text::new(&format!("{}%",
-					 sink_input_datas.borrow().get(index).unwrap().volume
+					 sink_input_datas[index].volume
 					 * 100 / MAX_VOLUME))
         	      .horizontal_alignment(HorizontalAlignment::Center)
         	      .vertical_alignment(VerticalAlignment::Center)
@@ -143,6 +151,10 @@ impl Sandbox for UserInterface {
 	    .spacing(20)
 	    .padding(20)
 	    .push(scrollable);
+
+	#[cfg(feature = "time")]
+	println!("Initialized for {} s.",
+		 SystemTime::now().duration_since(start).unwrap().as_secs_f64());
 	
 	Container::new(content)
 	    .width(Length::Fill)

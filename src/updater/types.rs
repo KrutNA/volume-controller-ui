@@ -1,7 +1,19 @@
-use libpulse_binding as pulse;
 use pulse::context::introspect;
 
 const APPLICATION_NAME: &'static str = "application.name";
+
+#[cfg(feature = "another_updater")]
+#[derive(Clone, Debug, Default)]
+pub struct Counter {
+    pub value: usize,
+}
+
+#[cfg(feature = "another_updater")]
+impl Counter {
+    pub fn inc(&mut self) {
+	self.value += 1;
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct SinkInputData {
@@ -19,3 +31,4 @@ impl<'a> From<&'a introspect::SinkInputInfo<'a>> for SinkInputData {
 			mute:   item.mute.clone() }
     }
 }
+
