@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use crate::updater::{
     SinkInputData, MainData, PulseHandler,
     update_sink_inputs, update_sink_input_volume_by_id, update_sink_input_mute_by_id,
-    update_fetch_sink, update_sink_volume, update_sink_mute,
+    update_fetch_sink,   update_sink_volume,   update_sink_mute,
     update_fetch_source, update_source_volume, update_source_mute,
 };
 
@@ -33,7 +33,6 @@ const SOURCE_NAME:      &'static str = "Microphone";
 pub struct UserInterface {
     pulse_handler:     PulseHandler,
     scroll:            scrollable::State,
-    mute_button_texts: (Text, Text),
 
     sink_input_uis:    Vec<(slider::State, button::State)>,
     sink_input_datas:  Rc<RefCell<Vec<SinkInputData>>>,
@@ -62,14 +61,6 @@ impl Sandbox for UserInterface {
 	Self {
 	    pulse_handler:     PulseHandler::new().unwrap(),
 	    scroll:            scrollable::State::new(),
-	    mute_button_texts: (Text::new("Mute")
-				.width(Length::Fill)
-				.vertical_alignment(VerticalAlignment::Center)
-				.horizontal_alignment(HorizontalAlignment::Center),
-				Text::new("Unmute")
-				.width(Length::Fill)
-				.vertical_alignment(VerticalAlignment::Center)
-				.horizontal_alignment(HorizontalAlignment::Center),),
 
 	    sink_input_uis:    Vec::new(),
 	    sink_input_datas:  Rc::new(RefCell::new(Vec::new())),
@@ -135,29 +126,29 @@ impl Sandbox for UserInterface {
 
 	#[cfg(feature = "time")]
 	let start = SystemTime::now();
-	
+
 	let mut scrollable = Scrollable::new(&mut self.scroll)
             .width(Length::Fill)
             .height(Length::Fill);
+
 	{
 	    let data    = self.sink_data.borrow();
 	    let (is_mute, volume) = (data.mute, data.volume);
 	    
-    	    let text    = UserInterface::create_name(SINK_NAME);
+    	    let text    = Self::create_name(SINK_NAME);
 	    
     	    let slider  = Slider::new(&mut self.sink_ui.0,
-    				      0.0..=MAX_VOLUME_FLOAT,
+    				      0.0 ..= MAX_VOLUME_FLOAT,
     				      volume as f32,
     				      move |v| Message::SinkSliderChanged(v as u32));
 	    
 	    let button  = Button::new(&mut self.sink_ui.1,
-    				      if is_mute { self.mute_button_texts.0.clone() }
-    				      else       { self.mute_button_texts.1.clone() },
+    				      Self::create_status_button(is_mute),
     				      move || Message::SinkMuteButtonPressed(!is_mute))
     		.width(Length::from(MUTE_BUTTON_SIZE))
     		.padding(10);
 	    
-    	    let status  = UserInterface::create_status(volume);
+    	    let status  = Self::create_status(volume);
 	    
     	    let row = Row::new()
     		.align_items(Align::Center)
@@ -175,16 +166,15 @@ impl Sandbox for UserInterface {
 	    
     	    let text    = UserInterface::create_name(SOURCE_NAME);
     	    let slider  = Slider::new(&mut self.source_ui.0,
-    				      0.0..=MAX_VOLUME_FLOAT,
+    				      0.0 ..= MAX_VOLUME_FLOAT,
     				      volume as f32,
     				      move |v| Message::SourceSliderChanged(v as u32));
 	    let button  = Button::new(&mut self.source_ui.1,
-    				      if is_mute { self.mute_button_texts.0.clone() }
-    				      else       { self.mute_button_texts.1.clone() },
+    				      Self::create_status_button(is_mute),
     				      move || Message::SourceMuteButtonPressed(!is_mute))
     		.width(Length::from(MUTE_BUTTON_SIZE))
     		.padding(10);
-    	    let status  = UserInterface::create_status(volume);
+    	    let status  = Self::create_status(volume);
 	    
     	    let row = Row::new()
     		.align_items(Align::Center)
@@ -204,16 +194,15 @@ impl Sandbox for UserInterface {
 		
     		let text    = UserInterface::create_name(&datas[index].name);
     		let slider  = Slider::new(&mut ui.0,
-    					  0.0..=MAX_VOLUME_FLOAT,
+    					  0.0 ..= MAX_VOLUME_FLOAT,
     					  volume as f32,
     					  move |v| Message::SliderChanged(index, id, v as u32));
     		let button  = Button::new(&mut ui.1,
-    					  if is_mute { self.mute_button_texts.0.clone() }
-    					  else       { self.mute_button_texts.1.clone() },
+    					  Self::create_status_button(is_mute),
     					  move || Message::MuteButtonPressed(id, !is_mute))
     		    .width(Length::from(MUTE_BUTTON_SIZE))
     		    .padding(10);
-    		let status  = UserInterface::create_status(volume);
+    		let status  = Self::create_status(volume);
 		
     		Row::new()
     		    .spacing(10)
@@ -273,5 +262,19 @@ impl UserInterface {
     	    .horizontal_alignment(HorizontalAlignment::Center)
     	    .vertical_alignment(VerticalAlignment::Center)
     	    .width(Length::from(PROCENT_STATUS_SIZE))
+    }
+
+    fn create_status_button(is_mute: bool) -> Text {
+	if is_mute {
+	    Text::new("Mute")
+		.width(Length::Fill)
+		.vertical_alignment(VerticalAlignment::Center)
+		.horizontal_alignment(HorizontalAlignment::Center)
+	} else {
+	    Text::new("Unmute")
+		.width(Length::Fill)
+		.vertical_alignment(VerticalAlignment::Center)
+		.horizontal_alignment(HorizontalAlignment::Center)
+	}
     }
 }
