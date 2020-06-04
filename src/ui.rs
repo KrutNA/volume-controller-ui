@@ -40,8 +40,8 @@ pub struct UserInterface {
     sink_ui:           (slider::State, button::State),
     sink_data:         Rc<RefCell<MainData>>,
 
-    source_ui:           (slider::State, button::State),
-    source_data:         Rc<RefCell<MainData>>,
+    source_ui:         (slider::State, button::State),
+    source_data:       Rc<RefCell<MainData>>,
 }
 
 #[derive(Debug, Clone)]
@@ -101,7 +101,7 @@ impl Sandbox for UserInterface {
 	    }
 	    Message::SinkMuteButtonPressed(status) => {
 		#[cfg(debug_assertions)]
-		println!("Log: volumebutton pressed with status to {}.", status);
+		println!("Log: volume button pressed with status to {}.", status);
 
 		update_sink_mute(&mut self.pulse_handler, status);
 	    }
@@ -114,7 +114,7 @@ impl Sandbox for UserInterface {
 	    }
 	    Message::SourceMuteButtonPressed(status) => {
 		#[cfg(debug_assertions)]
-		println!("Log: volumebutton pressed with status to {}.", status);
+		println!("Log: volume button pressed with status to {}.", status);
 
 		update_source_mute(&mut self.pulse_handler, status);
 	    }
@@ -237,7 +237,7 @@ impl Sandbox for UserInterface {
 impl UserInterface {
     fn update_data(&mut self) {
 	#[cfg(debug_assertions)]
-	println!("Log: Updating!");
+	println!("Log: Updating.");
 	
 	update_sink_inputs (&mut self.pulse_handler,
 			    self.sink_input_datas.clone(),
