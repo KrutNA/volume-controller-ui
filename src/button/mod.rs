@@ -5,8 +5,7 @@
 //! [`Button`]: struct.Button.html
 //! [`State`]: struct.State.html
 use iced_native::{
-    layout, mouse, Clipboard, Element, Event, Hasher, Layout, Length, Point,
-    Rectangle, Widget,
+    layout, mouse, Clipboard, Element, Event, Hasher, Layout, Length, Point, Rectangle, Widget,
 };
 use std::hash::Hash;
 
@@ -50,14 +49,10 @@ where
     ///
     /// [`Button`]: struct.Button.html
     /// [`State`]: struct.State.html
-    pub fn new<E, F>(
-	state: &'a mut State,
-	content: E,
-	on_press: F,
-    ) -> Self
+    pub fn new<E, F>(state: &'a mut State, content: E, on_press: F) -> Self
     where
         E: Into<Element<'a, Message, Renderer>>,
-	F: 'static + Fn() -> Message,
+        F: 'static + Fn() -> Message,
     {
         Button {
             state,
@@ -138,8 +133,7 @@ impl State {
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for Button<'a, Message, Renderer>
+impl<'a, Message, Renderer> Widget<Message, Renderer> for Button<'a, Message, Renderer>
 where
     Renderer: self::Renderer,
     Message: Clone,
@@ -152,11 +146,7 @@ where
         self.height
     }
 
-    fn layout(
-        &self,
-        renderer: &Renderer,
-        limits: &layout::Limits,
-    ) -> layout::Node {
+    fn layout(&self, renderer: &Renderer, limits: &layout::Limits) -> layout::Node {
         let padding = f32::from(self.padding);
         let limits = limits
             .min_width(self.min_width)
@@ -185,18 +175,16 @@ where
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let bounds = layout.bounds();
-		
-                self.state.is_pressed = bounds.contains(cursor_position);
 
+                self.state.is_pressed = bounds.contains(cursor_position);
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 let bounds = layout.bounds();
-		
-                let is_clicked = self.state.is_pressed
-                    && bounds.contains(cursor_position);
-		
+
+                let is_clicked = self.state.is_pressed && bounds.contains(cursor_position);
+
                 self.state.is_pressed = false;
-		
+
                 if is_clicked {
                     messages.push((self.on_press)());
                 }
@@ -263,15 +251,12 @@ pub trait Renderer: iced_native::Renderer + Sized {
     ) -> Self::Output;
 }
 
-impl<'a, Message, Renderer> From<Button<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
+impl<'a, Message, Renderer> From<Button<'a, Message, Renderer>> for Element<'a, Message, Renderer>
 where
     Renderer: 'a + self::Renderer,
     Message: 'a + Clone,
 {
-    fn from(
-        button: Button<'a, Message, Renderer>,
-    ) -> Element<'a, Message, Renderer> {
+    fn from(button: Button<'a, Message, Renderer>) -> Element<'a, Message, Renderer> {
         Element::new(button)
     }
 }

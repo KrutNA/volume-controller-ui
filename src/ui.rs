@@ -136,27 +136,24 @@ impl Sandbox for UserInterface {
 	    let (is_mute, volume) = (data.mute, data.volume);
 	    
     	    let text    = Self::create_name(SINK_NAME);
-	    
     	    let slider  = Slider::new(&mut self.sink_ui.0,
     				      0.0 ..= MAX_VOLUME_FLOAT,
     				      volume as f32,
     				      move |v| Message::SinkSliderChanged(v as u32));
-	    
 	    let button  = Button::new(&mut self.sink_ui.1,
     				      Self::create_status_button(is_mute),
     				      move || Message::SinkMuteButtonPressed(!is_mute))
     		.width(Length::from(MUTE_BUTTON_SIZE))
     		.padding(10);
-	    
-    	    let status  = Self::create_status(volume);
-	    
-    	    let row = Row::new()
+    	    let status  = Self::create_status(volume);	    
+    	    let row     = Row::new()
     		.align_items(Align::Center)
     		.spacing(10)
     		.push(text)
     		.push(slider)
     		.push(status)
     		.push(button);
+	    
 	    scrollable = scrollable.push(row);
 	}
 
@@ -175,8 +172,7 @@ impl Sandbox for UserInterface {
     		.width(Length::from(MUTE_BUTTON_SIZE))
     		.padding(10);
     	    let status  = Self::create_status(volume);
-	    
-    	    let row = Row::new()
+    	    let row     = Row::new()
     		.align_items(Align::Center)
     		.spacing(10)
     		.push(text)
@@ -189,29 +185,27 @@ impl Sandbox for UserInterface {
 
 	let datas = self.sink_input_datas.borrow();
 	for (index, ui) in self.sink_input_uis.iter_mut().enumerate() {
-	    let row = {
-		let (id, is_mute, volume) = (datas[index].id, datas[index].mute, datas[index].volume);
-		
-    		let text    = UserInterface::create_name(&datas[index].name);
-    		let slider  = Slider::new(&mut ui.0,
-    					  0.0 ..= MAX_VOLUME_FLOAT,
-    					  volume as f32,
-    					  move |v| Message::SliderChanged(index, id, v as u32));
-    		let button  = Button::new(&mut ui.1,
-    					  Self::create_status_button(is_mute),
-    					  move || Message::MuteButtonPressed(id, !is_mute))
-    		    .width(Length::from(MUTE_BUTTON_SIZE))
-    		    .padding(10);
-    		let status  = Self::create_status(volume);
-		
-    		Row::new()
-    		    .spacing(10)
-    		    .align_items(Align::Center)
-    		    .push(text)
-    		    .push(slider)
-    		    .push(status)
-    		    .push(button)
-	    };
+	    let (id, is_mute, volume) = (datas[index].id, datas[index].mute, datas[index].volume);
+
+    	    let text    = UserInterface::create_name(&datas[index].name);
+    	    let slider  = Slider::new(&mut ui.0,
+    				      0.0 ..= MAX_VOLUME_FLOAT,
+    				      volume as f32,
+    				      move |v| Message::SliderChanged(index, id, v as u32));
+    	    let button  = Button::new(&mut ui.1,
+    				      Self::create_status_button(is_mute),
+    				      move || Message::MuteButtonPressed(id, !is_mute))
+    		.width(Length::from(MUTE_BUTTON_SIZE))
+    		.padding(10);
+    	    let status  = Self::create_status(volume);
+    	    let row     = Row::new()
+    		.spacing(10)
+    		.align_items(Align::Center)
+    		.push(text)
+    		.push(slider)
+    		.push(status)
+    		.push(button);
+
 	    scrollable = scrollable.push(row);
 	}
 
@@ -222,7 +216,8 @@ impl Sandbox for UserInterface {
 
 	#[cfg(feature = "time")]
 	println!("Initialized for {} s.",
-		 SystemTime::now().duration_since(start).unwrap().as_secs_f64());
+		 SystemTime::now().duration_since(start).unwrap().as_secs_f64()
+	);
 	
 	Container::new(content)
 	    .width(Length::Fill)

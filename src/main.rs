@@ -1,8 +1,8 @@
-mod updater;
-mod ui;
 mod button;
+mod ui;
+mod updater;
 
-use iced::{Settings, Sandbox};
+use iced::{Sandbox, Settings};
 
 fn main() {
     ui::UserInterface::run(Settings::default());

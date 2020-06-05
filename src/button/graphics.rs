@@ -4,12 +4,10 @@
 //!
 //! [`Button`]: type.Button.html
 //! [`State`]: struct.State.html
-use iced_graphics::{ Defaults, Text };
 use iced_graphics::{Backend, Primitive, Renderer};
+use iced_graphics::{Defaults, Text};
 use iced_native::mouse;
-use iced_native::{
-    Background, Color, Element, Layout, Point, Rectangle, Vector,
-};
+use iced_native::{Background, Color, Element, Layout, Point, Rectangle, Vector};
 
 pub use iced_native::button::State;
 pub use iced_style::button::{Style, StyleSheet};
@@ -17,8 +15,7 @@ pub use iced_style::button::{Style, StyleSheet};
 /// A widget that produces a message when clicked.
 ///
 /// This is an alias of an `iced_native` button with an `iced_wgpu::Renderer`.
-pub type Button<'a, Message, Backend> =
-    super::Button<'a, Message, Renderer<Backend>>;
+pub type Button<'a, Message, Backend> = super::Button<'a, Message, Renderer<Backend>>;
 
 impl<B> super::Renderer for Renderer<B>
 where
@@ -85,9 +82,7 @@ where
                             y: bounds.y + styling.shadow_offset.y,
                             ..bounds
                         },
-                        background: Background::Color(
-                            [0.0, 0.0, 0.0, 0.5].into(),
-                        ),
+                        background: Background::Color([0.0, 0.0, 0.0, 0.5].into()),
                         border_radius: styling.border_radius,
                         border_width: 0,
                         border_color: Color::TRANSPARENT,
